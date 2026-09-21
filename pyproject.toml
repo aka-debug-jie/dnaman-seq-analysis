@@ -25,11 +25,15 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 dependencies = [
-    "pywinauto>=0.6.9",
-    "pywin32>=300",
     "Pillow>=9.0",
     "biopython>=1.80",
     "openpyxl>=3.1",
+    # The Win32 stack only exists on Windows. Keeping it behind a marker lets the
+    # package install anywhere, so the platform-free modules (commands, config,
+    # report, seqmath) stay importable off Windows while the GUI modules raise a
+    # descriptive ImportError when they are actually used.
+    "pywinauto>=0.6.9; sys_platform == 'win32'",
+    "pywin32>=300; sys_platform == 'win32'",
 ]
 
 [project.optional-dependencies]

@@ -46,6 +46,10 @@ from Python and AI agents, with modern tooling as fallback.
   through a setuptools dynamic attribute.
 - Installing the skill is available as `python -m dnaman install-skill`;
   `install_skill.py` remains as a compatibility shim.
+- `pywinauto` and `pywin32` are now guarded by a `sys_platform == "win32"`
+  marker, so the distribution installs on any OS and the platform-free modules
+  can be imported off Windows (previously the wheel could not be installed at
+  all on Linux/macOS, because `pywin32` has no non-Windows build).
 
 ### Fixed
 
