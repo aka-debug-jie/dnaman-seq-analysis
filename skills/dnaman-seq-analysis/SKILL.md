@@ -13,7 +13,7 @@ Windows only (DNAMAN is a Windows application).
 ## Setup
 
 ```powershell
-pip install -e .                      # or: pip install dnaman-automation
+pip install -e .                      # or: pip install dnaman-seq-analysis
 $env:DNAMAN_DIR  = "C:\Program Files (x86)\DNAMAN"   # folder with DNAMAN.EXE
 $env:DNAMAN_BASE = "C:\work\dnaman"                  # workspace root (optional)
 python -m dnaman doctor               # expect: result: ALL GOOD

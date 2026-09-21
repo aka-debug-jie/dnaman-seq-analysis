@@ -129,7 +129,9 @@ def build_excel(out_path=None, results_dir=None):
     for col, width in zip("ABCDE", (28, 8, 8, 9, 10)):
         ws3.column_dimensions[col].width = width
 
-    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    out_dir = os.path.dirname(out_path)
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
     wb.save(out_path)
     return out_path, len(rows), len(topics)
 

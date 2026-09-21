@@ -1,5 +1,14 @@
 import ctypes
+import sys
 from ctypes import wintypes
+
+if not sys.platform.startswith("win"):
+    raise ImportError(
+        "dnaman drives the DNAMAN 4.0 Windows GUI through Win32 APIs and only "
+        "runs on Windows (detected platform: %s). Install it on a Windows "
+        "machine, or use the Python fallbacks (Biopython / primer3-py / pydna) "
+        "described in the README instead." % sys.platform
+    )
 
 u32 = ctypes.WinDLL("user32", use_last_error=True)
 
