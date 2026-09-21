@@ -128,7 +128,9 @@ class Session:
                 for cid2, value in (options.get("set", {}) or {}).items():
                     h = child_by_id(dlg, int(cid2))
                     if h:
-                        type_text(h, str(value))
+                        # Spin-style edits (430 numeric fields, 347/348 regions)
+                        # ignore SetWindowText; they need EM_SETSEL + WM_CHAR.
+                        set_edit_value(h, value)
 
         deadline = time.time() + timeout
         new = {}
