@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dnaman-seq-analysis"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Drive DNAMAN 4.0 (legacy Windows GUI) from Python: restriction analysis, primer design, ORF, assembly, alignment and protein tools."
 readme = "README.md"
 requires-python = ">=3.9"
@@ -48,3 +48,6 @@ dnaman = "dnaman.cli:main"
 
 [tool.setuptools]
 packages = ["dnaman"]
+
+[tool.setuptools.dynamic]
+version = { attr = "dnaman._version.__version__" }

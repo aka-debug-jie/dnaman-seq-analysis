@@ -4,8 +4,7 @@ import time
 from ctypes import wintypes
 
 from . import commands as C
-from .win32 import (child_windows, class_of, click, ctrl_id, enabled, text_of,
-                    top_windows, u32, visible)
+from .win32 import child_windows, class_of, text_of, u32
 
 gdi32 = ctypes.WinDLL("gdi32", use_last_error=True)
 

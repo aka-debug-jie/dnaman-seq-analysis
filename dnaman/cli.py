@@ -1,9 +1,8 @@
 import argparse
 import os
-import subprocess
 import sys
 
-from . import app, commands as C, config, ops, results
+from . import commands as C, config, ops, report, skill
 
 
 def cmd_doctor(args):
@@ -104,12 +103,14 @@ def cmd_maprecon(args):
 
 
 def cmd_report(args):
-    from . import report
-
     path, files, topics = report.build_excel(args.out, args.results)
     print("workbook: %s" % path)
     print("rows    : %d file(s) across %d topic(s)" % (files, topics))
     return 0
+
+
+def cmd_install_skill(args):
+    return skill.run(args)
 
 
 def main(argv=None):
@@ -119,8 +120,8 @@ def main(argv=None):
     d = sub.add_parser("doctor", help="check environment and dependencies")
     d.set_defaults(func=cmd_doctor)
 
-    l = sub.add_parser("list", help="list command names and ids")
-    l.set_defaults(func=cmd_list)
+    ls = sub.add_parser("list", help="list command names and ids")
+    ls.set_defaults(func=cmd_list)
 
     o = sub.add_parser("op", help="run one command on one sequence")
     o.add_argument("--seq", required=True, help="sequence file name in SEQ_DIR or absolute path")
@@ -168,6 +169,10 @@ def main(argv=None):
     r.add_argument("--out", default=None)
     r.add_argument("--results", default=None)
     r.set_defaults(func=cmd_report)
+
+    s = sub.add_parser("install-skill", parents=[skill.build_parser(add_help=False)],
+                       help="install the bundled AI-agent skill")
+    s.set_defaults(func=cmd_install_skill)
 
     args = p.parse_args(argv)
     return args.func(args)

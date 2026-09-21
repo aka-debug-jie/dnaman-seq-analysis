@@ -136,18 +136,4 @@ def build_excel(out_path=None, results_dir=None):
     return out_path, len(rows), len(topics)
 
 
-def main(argv=None):
-    import argparse
 
-    p = argparse.ArgumentParser(prog="dnaman-report", description="summarise results into xlsx")
-    p.add_argument("--out", default=None)
-    p.add_argument("--results", default=None)
-    a = p.parse_args(argv)
-    path, files, topics = build_excel(a.out, a.results)
-    print("workbook : %s" % path)
-    print("rows     : %d file(s) across %d topic(s)" % (files, topics))
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

@@ -1,6 +1,11 @@
-"""Unit tests for the dnaman toolkit.
+"""Unit tests for the platform-independent core (run on any OS).
 
-Run:  python -m unittest discover -s tests -v
+Run:  python -m unittest discover -s tests -p "test_platform_free.py" -v
+
+These cover `commands` (id tables), `config` (paths), `report` (metric
+extraction, workbook building) and `seqmath` (sequence reading, fragment
+arithmetic). Nothing here touches the Win32 API, so CI runs it on Linux too.
+The genes that drive the DNAMAN GUI itself are in `test_windows.py`.
 """
 
 import os
@@ -11,7 +16,7 @@ import unittest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
-from dnaman import commands, config, ops, report, results
+from dnaman import commands, config, report, seqmath
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 DEMO_SEQ = os.path.join(DATA_DIR, "demo.seq")
@@ -88,73 +93,37 @@ class TestMetricExtraction(unittest.TestCase):
 
 class TestFragmentMath(unittest.TestCase):
     def test_circular_two_cuts(self):
-        self.assertEqual(sorted(ops._sizes_from_cuts(1000, [100, 300], circular=True)),
+        self.assertEqual(sorted(seqmath.sizes_from_cuts(1000, [100, 300], circular=True)),
                          [200, 800])
 
     def test_linear_two_cuts(self):
-        self.assertEqual(ops._sizes_from_cuts(1000, [100, 300], circular=False),
+        self.assertEqual(seqmath.sizes_from_cuts(1000, [100, 300], circular=False),
                          [99, 200, 701])
 
     def test_no_cuts(self):
-        self.assertEqual(ops._sizes_from_cuts(500, [], circular=True), [500])
+        self.assertEqual(seqmath.sizes_from_cuts(500, [], circular=True), [500])
 
     def test_common_vector_double_digest(self):
         # 2686 bp vector, EcoRI and HindIII sites 51 bp apart -> 51 + 2635 bp
-        both = ops._sizes_from_cuts(2686, [230, 281], circular=True)
+        both = seqmath.sizes_from_cuts(2686, [230, 281], circular=True)
         self.assertEqual(sorted(both), [51, 2635])
 
     def test_demo_fixture_digest(self):
-        seq = ops._read_dnaman_seq(DEMO_SEQ)
-        sites = ops._restriction_fragments(seq, ["EcoRI", "HindIII"], circular=False)
+        seq = seqmath.read_dnaman_seq(DEMO_SEQ)
+        sites = seqmath.restriction_fragments(seq, ["EcoRI", "HindIII"], circular=False)
         # Biopython reports the cut position (site start + 1 for EcoRI/HindIII)
         self.assertEqual(sites["EcoRI"], [52])
         self.assertEqual(sites["HindIII"], [252])
-        frags = ops._sizes_from_cuts(len(seq), sites["EcoRI"] + sites["HindIII"],
-                                     circular=False)
+        frags = seqmath.sizes_from_cuts(len(seq), sites["EcoRI"] + sites["HindIII"],
+                                        circular=False)
         self.assertEqual(frags, [51, 200, 49])
 
 
 class TestReadSequence(unittest.TestCase):
     def test_read_dnaman_seq(self):
-        seq = ops._read_dnaman_seq(DEMO_SEQ)
+        seq = seqmath.read_dnaman_seq(DEMO_SEQ)
         self.assertEqual(len(seq), 300)
         self.assertTrue(set(seq) <= set("ACGTN"))
-
-
-class TestTrim(unittest.TestCase):
-    def test_trim_crops_borders(self):
-        from PIL import Image, ImageDraw
-
-        with tempfile.TemporaryDirectory() as tmp:
-            p = os.path.join(tmp, "img.png")
-            im = Image.new("RGB", (200, 200), (255, 255, 255))
-            ImageDraw.Draw(im).rectangle([80, 80, 120, 120], fill=(0, 0, 0))
-            im.save(p)
-            results.trim(p, margin=2)
-            w, h = Image.open(p).size
-            self.assertLess(w, 60)
-            self.assertLess(h, 60)
-
-
-class TestCloningOps(unittest.TestCase):
-    def test_silent_mutation_region_params(self):
-        import inspect
-
-        sig = inspect.signature(ops.run_silent_mutation)
-        self.assertIn("start", sig.parameters)
-        self.assertIn("end", sig.parameters)
-
-    def test_directed_mismatch_params(self):
-        import inspect
-
-        sig = inspect.signature(ops.run_directed_mismatch)
-        self.assertIn("position", sig.parameters)
-        self.assertIn("base", sig.parameters)
-
-    def test_set_edit_value_helper(self):
-        from dnaman.win32 import set_edit_value
-
-        self.assertTrue(callable(set_edit_value))
 
 
 class TestReportCollect(unittest.TestCase):
@@ -172,6 +141,21 @@ class TestReportCollect(unittest.TestCase):
             path, files, topics = report.build_excel(out, tmp)
             self.assertTrue(os.path.exists(path))
             self.assertEqual((files, topics), (1, 1))
+
+    def test_build_excel_bare_filename(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tdir = os.path.join(tmp, "topic_a")
+            os.makedirs(tdir)
+            with open(os.path.join(tdir, "text.txt"), "w", encoding="utf-8") as fh:
+                fh.write("SEQ  X: 10 bp;\n")
+            cwd = os.getcwd()
+            os.chdir(tmp)
+            try:
+                path, _, _ = report.build_excel("summary.xlsx", tmp)
+            finally:
+                os.chdir(cwd)
+            self.assertTrue(os.path.exists(os.path.join(tmp, "summary.xlsx")))
+            self.assertEqual(path, "summary.xlsx")
 
 
 if __name__ == "__main__":

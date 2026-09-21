@@ -3,9 +3,20 @@ import os
 import time
 
 from . import app, commands as C, config, dialogs, results
-from .win32 import (BM_GETCHECK, WM_COMMAND, child_by_id, child_windows, class_of,
-                    click, enabled, set_edit_value, text_of, top_windows, u32,
-                    visible, wait_for)
+from .seqmath import read_dnaman_seq, restriction_fragments, sizes_from_cuts
+from .win32 import (BM_GETCHECK, WM_COMMAND, child_by_id, click, maximize,
+                    set_edit_value, text_of, top_windows, type_text, u32, wait_for)
+
+# Re-exported under their historical private names (also used by the tests).
+_read_dnaman_seq = read_dnaman_seq
+_restriction_fragments = restriction_fragments
+_sizes_from_cuts = sizes_from_cuts
+
+__all__ = [
+    "Session", "batch", "run_one", "run_pairwise", "run_silent_mutation",
+    "run_directed_mismatch", "run_map_reconstruction", "cmd_id",
+    "read_dnaman_seq", "restriction_fragments", "sizes_from_cuts",
+]
 
 LOG_PATH = os.path.join(config.LOG_DIR, "runs.jsonl")
 
@@ -36,6 +47,7 @@ class Session:
         self.win = None
         self.main_h = None
         self.pid = None
+        self.current_seq = None
 
     def __enter__(self):
         config.ensure_dirs()
@@ -116,8 +128,6 @@ class Session:
                 for cid2, value in (options.get("set", {}) or {}).items():
                     h = child_by_id(dlg, int(cid2))
                     if h:
-                        from .win32 import type_text
-
                         type_text(h, str(value))
 
         deadline = time.time() + timeout
@@ -144,7 +154,7 @@ class Session:
 
         written = self._export(new, outdir, tag)
         _log_run({
-            "seq": getattr(self, "current_seq", None),
+            "seq": self.current_seq,
             "cmd": cid, "name": name if isinstance(name, str) else str(name),
             "tag": tag, "files": written, "message": msg,
         })
@@ -167,8 +177,6 @@ class Session:
         for h, (cls, title) in new:
             if not cls.startswith("Afx:400000:b") or not title.strip() or results.rich_of(h):
                 continue
-            from .win32 import maximize
-
             maximize(h)
             safe = "".join(ch if ch.isalnum() or ch in "-_" else "_" for ch in title)[:24]
             p = os.path.join(outdir, "%s_%s.png" % (tag, safe))
@@ -246,33 +254,6 @@ def run_directed_mismatch(seqfile, position, base, outdir=None,
                      options={"dialog": "Directed Mismatch", "handler": handler})
 
 
-def _restriction_fragments(seq, enzymes, circular=True):
-    from Bio.Restriction import Analysis, RestrictionBatch
-    from Bio.Seq import Seq as BioSeq
-
-    batch = RestrictionBatch(enzymes)
-    res = Analysis(batch, BioSeq(seq), linear=not circular).full()
-    sites = {str(e): sorted(res[e]) for e in batch}
-    return sites
-
-
-def _sizes_from_cuts(length, cuts, circular=True):
-    cuts = sorted(set(cuts))
-    if not cuts:
-        return [length]
-    if circular:
-        out = []
-        for i in range(len(cuts)):
-            a, b = cuts[i], cuts[(i + 1) % len(cuts)]
-            out.append((b - a) % length or length)
-        return out
-    out = [cuts[0] - 1]
-    for i in range(1, len(cuts)):
-        out.append(cuts[i] - cuts[i - 1])
-    out.append(length - cuts[-1] + 1)
-    return out
-
-
 def run_map_reconstruction(seqfile, enz_a, enz_b, circular=True, outdir=None,
                            tag="map_reconstruction", log=print):
     """Restriction | Map Reconstruction (340): fill the fragment grid from a
@@ -286,8 +267,6 @@ def run_map_reconstruction(seqfile, enz_a, enz_b, circular=True, outdir=None,
     log("  %s=%s  %s=%s  both=%s" % (enz_a, frag_a, enz_b, frag_b, frag_ab))
 
     def handler(session, dlg):
-        from .win32 import type_text
-
         for col_base, sizes in ((1001, frag_a), (1011, frag_b), (1021, frag_ab)):
             for i, size in enumerate(sorted(sizes, reverse=True)[:10]):
                 h = child_by_id(dlg, col_base + i)
@@ -299,22 +278,6 @@ def run_map_reconstruction(seqfile, enz_a, enz_b, circular=True, outdir=None,
         s.load(seqfile)
         return s.run("map_reconstruction", outdir, tag=tag,
                      options={"dialog": "Map Reconstruction", "handler": handler})
-
-
-def _read_dnaman_seq(path):
-    out = []
-    started = False
-    with open(path, encoding="utf-8", errors="replace") as fh:
-        lines = fh.read().splitlines()
-    for line in lines:
-        if line.startswith("ORIGIN"):
-            started = True
-            continue
-        if started and line.strip():
-            parts = line.split(None, 1)
-            if len(parts) > 1:
-                out.append(parts[1].replace(" ", ""))
-    return "".join(out)
 
 
 def run_one(seqfile, op, outdir=None, tag=None, genbank=False, protein=False,

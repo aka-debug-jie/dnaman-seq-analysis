@@ -1,9 +1,8 @@
-import os
 import subprocess
 import time
 
 from . import config
-from .win32 import (class_of, find_top, text_of, top_windows, wait_for)
+from .win32 import class_of, text_of, wait_for
 
 _app = None
 _win = None

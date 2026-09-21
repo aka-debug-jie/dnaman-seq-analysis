@@ -3,9 +3,8 @@ import time
 
 from . import commands as C
 from .win32 import (LB_GETCOUNT, LB_GETTEXT, LB_SETCURSEL, WM_CLOSE, WM_COMMAND,
-                    child_by_id, child_by_text, child_windows, class_of, click, ctrl_id,
-                    enabled, find_top, text_of, top_windows, type_text, u32, visible,
-                    wait_for)
+                    child_by_id, child_by_text, class_of, click, enabled, text_of,
+                    top_windows, type_text, u32, visible, wait_for)
 
 _sa_done = set()
 
