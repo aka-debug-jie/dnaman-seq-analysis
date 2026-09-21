@@ -5,16 +5,54 @@ on:
   pull_request:
 
 jobs:
-  test:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install ruff
+        run: pip install ruff==0.15.*
+
+      - name: Lint
+        run: ruff check dnaman tests examples install_skill.py
+
+  platform-free:
+    # The Win32 layer cannot be imported off Windows; the rest of the package can,
+    # so this half of the suite runs here on every supported Python.
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.12"]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install biopython openpyxl
+
+      - name: Run platform-free unit tests
+        run: python -m unittest discover -s tests -p "test_platform_free.py" -v
+
+  windows:
     runs-on: windows-latest
     strategy:
       fail-fast: false
       matrix:
         python-version: ["3.9", "3.11", "3.12"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
 
